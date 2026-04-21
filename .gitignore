@@ -1,0 +1,23 @@
+# Android build outputs
+*.apk
+*.aab
+*.ap_
+*.dex
+
+# Build directories
+build/
+.gradle/
+captures/
+
+# Local configuration (contains SDK path, never commit)
+local.properties
+
+# IDE files
+.idea/
+*.iml
+.DS_Store
+
+# Test contact helper (emulator-only tooling)
+test_contacts.vcf
+add_contacts.sh
+screen*.png

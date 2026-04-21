@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">NameSupport</string>
+    <string name="scan_contacts">Scan Contacts</string>
+    <string name="apply_changes">Apply Changes</string>
+    <string name="empty_message">Press \"Scan Contacts\" to find Hebrew contacts</string>
+    <string name="no_contacts_found">No Hebrew contacts found without a phonetic name</string>
+    <string name="permission_required">Contacts permission is required to use this app</string>
+    <string name="no_contacts_selected">No contacts selected</string>
+</resources>
