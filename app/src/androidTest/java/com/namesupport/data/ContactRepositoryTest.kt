@@ -7,6 +7,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.rule.GrantPermissionRule
 import com.namesupport.util.HebrewTransliterator
+import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -95,7 +96,7 @@ class ContactRepositoryTest {
 
     @Test
     fun getHebrewContactsReturnsListWithoutCrash() {
-        val contacts = repository.getHebrewContactsWithoutPhonetic()
+        val contacts = runBlocking { repository.getHebrewContactsWithoutPhonetic() }
         assertNotNull(contacts)
     }
 
@@ -103,7 +104,7 @@ class ContactRepositoryTest {
     fun hebrewContactIsDetectedAndReturned() {
         insertTestContact("יוסי כהן")
 
-        val contacts = repository.getHebrewContactsWithoutPhonetic()
+        val contacts = runBlocking { repository.getHebrewContactsWithoutPhonetic() }
         val found = contacts.any { it.displayName == "יוסי כהן" }
         assertTrue("Hebrew contact should appear in scan results", found)
     }
@@ -112,7 +113,7 @@ class ContactRepositoryTest {
     fun latinContactIsNotReturned() {
         insertTestContact("John Smith")
 
-        val contacts = repository.getHebrewContactsWithoutPhonetic()
+        val contacts = runBlocking { repository.getHebrewContactsWithoutPhonetic() }
         val found = contacts.any { it.displayName == "John Smith" }
         assertFalse("Latin-only contact should not appear in scan results", found)
     }
@@ -121,7 +122,7 @@ class ContactRepositoryTest {
     fun suggestionIsCorrectForKnownName() {
         insertTestContact("שרה לוי")
 
-        val contacts = repository.getHebrewContactsWithoutPhonetic()
+        val contacts = runBlocking { repository.getHebrewContactsWithoutPhonetic() }
         val item = contacts.firstOrNull { it.displayName == "שרה לוי" }
         assertNotNull("Contact שרה לוי should be in results", item)
         assertEquals("Sarah Levi", item!!.suggestion)
@@ -131,14 +132,14 @@ class ContactRepositoryTest {
     fun afterApplyContactNoLongerAppearsInScan() {
         insertTestContact("דוד מזרחי")
 
-        val before = repository.getHebrewContactsWithoutPhonetic()
+        val before = runBlocking { repository.getHebrewContactsWithoutPhonetic() }
         val contact = before.firstOrNull { it.displayName == "דוד מזרחי" }
         assertNotNull("Contact should be found before apply", contact)
 
         val applied = repository.applyPhoneticName(contact!!)
         assertTrue("applyPhoneticName should return true", applied)
 
-        val after = repository.getHebrewContactsWithoutPhonetic()
+        val after = runBlocking { repository.getHebrewContactsWithoutPhonetic() }
         val stillPresent = after.any { it.displayName == "דוד מזרחי" }
         assertFalse("Contact should not appear in scan after phonetic name is set", stillPresent)
     }
@@ -148,7 +149,7 @@ class ContactRepositoryTest {
         insertTestContact("משה שפירא")
 
         val before = repository.countTranslatedContacts()
-        val contacts = repository.getHebrewContactsWithoutPhonetic()
+        val contacts = runBlocking { repository.getHebrewContactsWithoutPhonetic() }
         val target = contacts.firstOrNull { it.displayName == "משה שפירא" } ?: return
         repository.applyPhoneticName(target)
         val after = repository.countTranslatedContacts()

@@ -2,6 +2,7 @@ package com.namesupport.util
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -170,5 +171,44 @@ class HebrewTransliteratorTest {
         // שָׁלוֹם with full nikud should still match שלום in dictionary
         val result = HebrewTransliterator.transliterate("שָׁלוֹם")
         assertEquals("Shalom", result)
+    }
+
+    // ── Relationship words (v3) ───────────────────────────────────────────────
+
+    @Test
+    fun `dictionary - Abba (father)`() {
+        assertEquals("Abba", HebrewTransliterator.transliterate("אבא"))
+    }
+
+    @Test
+    fun `dictionary - Ima (mother)`() {
+        assertEquals("Ima", HebrewTransliterator.transliterate("אמא"))
+    }
+
+    @Test
+    fun `dictionary - Saba (grandfather)`() {
+        assertEquals("Saba", HebrewTransliterator.transliterate("סבא"))
+    }
+
+    @Test
+    fun `dictionary - Savta (grandmother)`() {
+        assertEquals("Savta", HebrewTransliterator.transliterate("סבתא"))
+    }
+
+    // ── dictionaryLookup public API ───────────────────────────────────────────
+
+    @Test
+    fun `dictionaryLookup returns known word`() {
+        assertEquals("Sarah", HebrewTransliterator.dictionaryLookup("שרה"))
+    }
+
+    @Test
+    fun `dictionaryLookup returns null for unknown word`() {
+        assertNull(HebrewTransliterator.dictionaryLookup("בלבל"))
+    }
+
+    @Test
+    fun `dictionaryLookup strips nikud before lookup`() {
+        assertEquals("Shalom", HebrewTransliterator.dictionaryLookup("שָׁלוֹם"))
     }
 }

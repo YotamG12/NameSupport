@@ -4,13 +4,18 @@ import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
+import android.text.InputType
+import android.view.Menu
+import android.view.MenuItem
 import android.view.View
 import android.widget.Button
+import android.widget.EditText
 import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.cardview.widget.CardView
 import androidx.core.content.ContextCompat
@@ -21,6 +26,7 @@ import com.google.android.material.switchmaterial.SwitchMaterial
 import com.namesupport.notification.NotificationHelper
 import com.namesupport.ui.ContactAdapter
 import com.namesupport.ui.MainViewModel
+import com.namesupport.util.ApiKeyManager
 
 class MainActivity : AppCompatActivity() {
 
@@ -166,6 +172,43 @@ class MainActivity : AppCompatActivity() {
             findViewById<TextView>(R.id.tvTranslatedCount).text =
                 resources.getQuantityString(R.plurals.contacts_translated, count, count)
         }
+    }
+
+    // ── Options menu ──────────────────────────────────────────────────────────
+
+    override fun onCreateOptionsMenu(menu: Menu): Boolean {
+        menuInflater.inflate(R.menu.menu_main, menu)
+        return true
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        return when (item.itemId) {
+            R.id.action_api_key -> { showApiKeyDialog(); true }
+            else -> super.onOptionsItemSelected(item)
+        }
+    }
+
+    private fun showApiKeyDialog() {
+        val editText = EditText(this).apply {
+            hint = getString(R.string.api_key_hint)
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
+            setText(ApiKeyManager.getApiKey(this@MainActivity) ?: "")
+            setPadding(48, 24, 48, 24)
+        }
+
+        AlertDialog.Builder(this)
+            .setTitle(getString(R.string.api_key_title))
+            .setMessage(getString(R.string.api_key_message))
+            .setView(editText)
+            .setPositiveButton(getString(R.string.save)) { _, _ ->
+                val key = editText.text.toString().trim()
+                ApiKeyManager.setApiKey(this, key)
+                val msg = if (key.isNotEmpty()) getString(R.string.api_key_saved)
+                          else getString(R.string.api_key_cleared)
+                Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
+            }
+            .setNegativeButton(getString(R.string.cancel), null)
+            .show()
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────

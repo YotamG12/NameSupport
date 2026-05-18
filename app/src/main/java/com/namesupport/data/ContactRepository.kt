@@ -7,13 +7,17 @@ import android.provider.ContactsContract
 import android.util.Log
 import com.namesupport.model.ContactItem
 import com.namesupport.util.HebrewTransliterator
+import com.namesupport.util.SmartTransliterator
 
 class ContactRepository(private val context: Context) {
 
+    private val translator = SmartTransliterator(context)
+
     // ── Read ──────────────────────────────────────────────────────────────────
 
-    fun getHebrewContactsWithoutPhonetic(): List<ContactItem> {
-        val contacts = mutableListOf<ContactItem>()
+    suspend fun getHebrewContactsWithoutPhonetic(): List<ContactItem> {
+        // Step 1: query contacts, collect those with Hebrew names lacking phonetic data
+        val raw = mutableListOf<Pair<Long, String>>() // (contactId, displayName)
         val nameCol = ContactsContract.Contacts.DISPLAY_NAME
         val projection = arrayOf(ContactsContract.Contacts._ID, nameCol)
 
@@ -33,13 +37,7 @@ class ContactRepository(private val context: Context) {
                     val id = cursor.getLong(idIdx)
                     val name = cursor.getString(nameIdx) ?: continue
                     if (HebrewTransliterator.containsHebrew(name) && !hasPhoneticName(id)) {
-                        contacts.add(
-                            ContactItem(
-                                id = id,
-                                displayName = name,
-                                suggestion = HebrewTransliterator.transliterate(name),
-                            )
-                        )
+                        raw.add(id to name)
                     }
                 }
             }
@@ -47,7 +45,16 @@ class ContactRepository(private val context: Context) {
             Log.e(TAG, "getHebrewContactsWithoutPhonetic failed", e)
         }
 
-        return contacts
+        // Step 2: batch-transliterate all names (uses Claude API when available)
+        val suggestions = translator.transliterateAll(raw.map { it.second })
+
+        return raw.map { (id, name) ->
+            ContactItem(
+                id = id,
+                displayName = name,
+                suggestion = suggestions[name] ?: HebrewTransliterator.transliterate(name),
+            )
+        }
     }
 
     /** Count of contacts that already have a phonetic name set by this app. */
