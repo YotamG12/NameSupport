@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <plurals name="contacts_translated">
+        <item quantity="one">%d contact translated</item>
+        <item quantity="other">%d contacts translated</item>
+    </plurals>
+
+    <plurals name="notif_sync_text">
+        <item quantity="one">%d contact automatically transliterated</item>
+        <item quantity="other">%d contacts automatically transliterated</item>
+    </plurals>
+</resources>

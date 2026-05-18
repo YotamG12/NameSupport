@@ -1,10 +1,37 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">NameSupport</string>
+
+    <!-- Buttons -->
     <string name="scan_contacts">Scan Contacts</string>
+    <string name="scan_now">Scan Now</string>
     <string name="apply_changes">Apply Changes</string>
+
+    <!-- Empty / status messages -->
     <string name="empty_message">Press \"Scan Contacts\" to find Hebrew contacts</string>
     <string name="no_contacts_found">No Hebrew contacts found without a phonetic name</string>
     <string name="permission_required">Contacts permission is required to use this app</string>
     <string name="no_contacts_selected">No contacts selected</string>
+
+    <!-- Onboarding card -->
+    <string name="onboarding_title">Welcome to NameSupport</string>
+    <string name="onboarding_body">This app scans your contacts for Hebrew names and adds an English phonetic transliteration so voice assistants (Google Assistant, Bixby, Samsung) can recognise them.\n\nPress Scan Contacts to begin. You can review and approve each translation before anything is saved.</string>
+
+    <!-- Status card -->
+    <string name="background_monitoring">Background monitoring</string>
+    <string name="service_running">Monitoring active</string>
+    <string name="service_stopped">Monitoring paused</string>
+
+    <!-- Plurals are in a separate plurals block below -->
+
+    <!-- Notification channels -->
+    <string name="notif_channel_monitor_name">Contact Monitoring</string>
+    <string name="notif_channel_monitor_desc">Persistent notification while NameSupport is watching your contacts</string>
+    <string name="notif_channel_sync_name">Contact Updates</string>
+    <string name="notif_channel_sync_desc">Shown when new contacts are automatically transliterated</string>
+
+    <!-- Notification content -->
+    <string name="notif_monitor_title">NameSupport</string>
+    <string name="notif_monitor_text">Monitoring contacts for Hebrew names…</string>
+    <string name="notif_sync_title">Contacts updated</string>
 </resources>

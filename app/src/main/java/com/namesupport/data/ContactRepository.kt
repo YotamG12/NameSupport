@@ -10,14 +10,10 @@ import com.namesupport.util.HebrewTransliterator
 
 class ContactRepository(private val context: Context) {
 
-    companion object {
-        private const val TAG = "ContactRepository"
-    }
+    // ── Read ──────────────────────────────────────────────────────────────────
 
     fun getHebrewContactsWithoutPhonetic(): List<ContactItem> {
         val contacts = mutableListOf<ContactItem>()
-
-        // DISPLAY_NAME is the safe alias; DISPLAY_NAME_PRIMARY is unavailable on some builds
         val nameCol = ContactsContract.Contacts.DISPLAY_NAME
         val projection = arrayOf(ContactsContract.Contacts._ID, nameCol)
 
@@ -36,11 +32,7 @@ class ContactRepository(private val context: Context) {
                 while (cursor.moveToNext()) {
                     val id = cursor.getLong(idIdx)
                     val name = cursor.getString(nameIdx) ?: continue
-                    val isHebrew = HebrewTransliterator.containsHebrew(name)
-                    val hasPhonetic = hasPhoneticName(id)
-                    Log.d(TAG, "Contact: '$name' hebrew=$isHebrew phonetic=$hasPhonetic")
-
-                    if (isHebrew && !hasPhonetic) {
+                    if (HebrewTransliterator.containsHebrew(name) && !hasPhoneticName(id)) {
                         contacts.add(
                             ContactItem(
                                 id = id,
@@ -52,10 +44,31 @@ class ContactRepository(private val context: Context) {
                 }
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Scan failed", e)
+            Log.e(TAG, "getHebrewContactsWithoutPhonetic failed", e)
         }
 
         return contacts
+    }
+
+    /** Count of contacts that already have a phonetic name set by this app. */
+    fun countTranslatedContacts(): Int {
+        var count = 0
+        try {
+            val selection =
+                "${ContactsContract.Data.MIMETYPE} = ? AND " +
+                        "${ContactsContract.CommonDataKinds.StructuredName.PHONETIC_GIVEN_NAME} IS NOT NULL AND " +
+                        "${ContactsContract.CommonDataKinds.StructuredName.PHONETIC_GIVEN_NAME} != ''"
+            context.contentResolver.query(
+                ContactsContract.Data.CONTENT_URI,
+                arrayOf(ContactsContract.Data.CONTACT_ID),
+                selection,
+                arrayOf(ContactsContract.CommonDataKinds.StructuredName.CONTENT_ITEM_TYPE),
+                null,
+            )?.use { count = it.count }
+        } catch (e: Exception) {
+            Log.e(TAG, "countTranslatedContacts failed", e)
+        }
+        return count
     }
 
     private fun hasPhoneticName(contactId: Long): Boolean {
@@ -71,11 +84,7 @@ class ContactRepository(private val context: Context) {
         )
 
         context.contentResolver.query(
-            ContactsContract.Data.CONTENT_URI,
-            projection,
-            selection,
-            args,
-            null,
+            ContactsContract.Data.CONTENT_URI, projection, selection, args, null,
         )?.use { cursor ->
             while (cursor.moveToNext()) {
                 val given = cursor.getString(0)
@@ -86,14 +95,27 @@ class ContactRepository(private val context: Context) {
         return false
     }
 
+    // ── Write ─────────────────────────────────────────────────────────────────
+
+    /**
+     * Writes the English transliteration into both:
+     *  - PHONETIC_GIVEN_NAME → used by Google Assistant, stock dialer, most OEMs
+     *  - NICKNAME            → used by Bixby and Samsung contacts
+     *
+     * Display name is never touched.
+     */
     fun applyPhoneticName(contact: ContactItem): Boolean {
         return try {
             val rawIds = getRawContactIds(contact.id)
             if (rawIds.isEmpty()) return false
+
             rawIds.any { rawId ->
-                updateOrInsertPhoneticName(rawId, contact.displayName, contact.suggestion)
+                val ok = updateOrInsertPhoneticName(rawId, contact.displayName, contact.suggestion)
+                updateOrInsertNickname(rawId, contact.suggestion)   // best-effort; not counted
+                ok
             }
         } catch (e: Exception) {
+            Log.e(TAG, "applyPhoneticName failed for '${contact.displayName}'", e)
             false
         }
     }
@@ -118,53 +140,61 @@ class ContactRepository(private val context: Context) {
         displayName: String,
         phoneticName: String,
     ): Boolean {
-        val selection =
-            "${ContactsContract.Data.RAW_CONTACT_ID} = ? AND ${ContactsContract.Data.MIMETYPE} = ?"
-        val args = arrayOf(
-            rawContactId.toString(),
-            ContactsContract.CommonDataKinds.StructuredName.CONTENT_ITEM_TYPE,
-        )
+        val mime = ContactsContract.CommonDataKinds.StructuredName.CONTENT_ITEM_TYPE
+        val existingId = queryDataId(rawContactId, mime)
 
-        // Look for an existing StructuredName row for this raw contact
-        val existingDataId: Long? = context.contentResolver.query(
-            ContactsContract.Data.CONTENT_URI,
-            arrayOf(ContactsContract.Data._ID),
-            selection,
-            args,
-            null,
-        )?.use { cursor ->
-            if (cursor.moveToFirst()) cursor.getLong(0) else null
-        }
-
-        return if (existingDataId != null) {
-            // Update the phonetic field on the existing row
+        return if (existingId != null) {
             val values = ContentValues().apply {
-                put(
-                    ContactsContract.CommonDataKinds.StructuredName.PHONETIC_GIVEN_NAME,
-                    phoneticName,
-                )
+                put(ContactsContract.CommonDataKinds.StructuredName.PHONETIC_GIVEN_NAME, phoneticName)
             }
             context.contentResolver.update(
-                ContentUris.withAppendedId(ContactsContract.Data.CONTENT_URI, existingDataId),
-                values,
-                null,
-                null,
+                ContentUris.withAppendedId(ContactsContract.Data.CONTENT_URI, existingId),
+                values, null, null,
             ) > 0
         } else {
-            // Insert a new StructuredName row with the phonetic field
             val values = ContentValues().apply {
                 put(ContactsContract.Data.RAW_CONTACT_ID, rawContactId)
-                put(
-                    ContactsContract.Data.MIMETYPE,
-                    ContactsContract.CommonDataKinds.StructuredName.CONTENT_ITEM_TYPE,
-                )
+                put(ContactsContract.Data.MIMETYPE, mime)
                 put(ContactsContract.CommonDataKinds.StructuredName.DISPLAY_NAME, displayName)
-                put(
-                    ContactsContract.CommonDataKinds.StructuredName.PHONETIC_GIVEN_NAME,
-                    phoneticName,
-                )
+                put(ContactsContract.CommonDataKinds.StructuredName.PHONETIC_GIVEN_NAME, phoneticName)
             }
             context.contentResolver.insert(ContactsContract.Data.CONTENT_URI, values) != null
         }
+    }
+
+    /** Writes the nickname field — read by Bixby and Samsung voice assistants. */
+    private fun updateOrInsertNickname(rawContactId: Long, nickname: String): Boolean {
+        val mime = ContactsContract.CommonDataKinds.Nickname.CONTENT_ITEM_TYPE
+        val existingId = queryDataId(rawContactId, mime)
+
+        return if (existingId != null) {
+            val values = ContentValues().apply {
+                put(ContactsContract.CommonDataKinds.Nickname.NAME, nickname)
+            }
+            context.contentResolver.update(
+                ContentUris.withAppendedId(ContactsContract.Data.CONTENT_URI, existingId),
+                values, null, null,
+            ) > 0
+        } else {
+            val values = ContentValues().apply {
+                put(ContactsContract.Data.RAW_CONTACT_ID, rawContactId)
+                put(ContactsContract.Data.MIMETYPE, mime)
+                put(ContactsContract.CommonDataKinds.Nickname.NAME, nickname)
+            }
+            context.contentResolver.insert(ContactsContract.Data.CONTENT_URI, values) != null
+        }
+    }
+
+    private fun queryDataId(rawContactId: Long, mimeType: String): Long? =
+        context.contentResolver.query(
+            ContactsContract.Data.CONTENT_URI,
+            arrayOf(ContactsContract.Data._ID),
+            "${ContactsContract.Data.RAW_CONTACT_ID} = ? AND ${ContactsContract.Data.MIMETYPE} = ?",
+            arrayOf(rawContactId.toString(), mimeType),
+            null,
+        )?.use { if (it.moveToFirst()) it.getLong(0) else null }
+
+    companion object {
+        private const val TAG = "ContactRepository"
     }
 }
