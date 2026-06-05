@@ -6,6 +6,7 @@ import android.content.Context
 import android.provider.ContactsContract
 import android.util.Log
 import com.namesupport.model.ContactItem
+import com.namesupport.util.GeminiTransliterator
 import com.namesupport.util.HebrewTransliterator
 
 class ContactRepository(private val context: Context) {
@@ -14,10 +15,11 @@ class ContactRepository(private val context: Context) {
         private const val TAG = "ContactRepository"
     }
 
-    fun getHebrewContactsWithoutPhonetic(): List<ContactItem> {
-        val contacts = mutableListOf<ContactItem>()
+    suspend fun getHebrewContactsWithoutPhonetic(
+        gemini: GeminiTransliterator? = null,
+    ): List<ContactItem> {
+        val rawContacts = mutableListOf<Pair<Long, String>>()
 
-        // DISPLAY_NAME is the safe alias; DISPLAY_NAME_PRIMARY is unavailable on some builds
         val nameCol = ContactsContract.Contacts.DISPLAY_NAME
         val projection = arrayOf(ContactsContract.Contacts._ID, nameCol)
 
@@ -41,13 +43,7 @@ class ContactRepository(private val context: Context) {
                     Log.d(TAG, "Contact: '$name' hebrew=$isHebrew phonetic=$hasPhonetic")
 
                     if (isHebrew && !hasPhonetic) {
-                        contacts.add(
-                            ContactItem(
-                                id = id,
-                                displayName = name,
-                                suggestion = HebrewTransliterator.transliterate(name),
-                            )
-                        )
+                        rawContacts.add(id to name)
                     }
                 }
             }
@@ -55,7 +51,20 @@ class ContactRepository(private val context: Context) {
             Log.e(TAG, "Scan failed", e)
         }
 
-        return contacts
+        if (rawContacts.isEmpty()) return emptyList()
+
+        val names = rawContacts.map { it.second }
+        val suggestions = if (gemini != null) {
+            val result = gemini.transliterateAll(names)
+            if (result.size == names.size) result
+            else names.map { HebrewTransliterator.transliterate(it) }
+        } else {
+            names.map { HebrewTransliterator.transliterate(it) }
+        }
+
+        return rawContacts.mapIndexed { i, (id, name) ->
+            ContactItem(id, name, suggestions[i])
+        }
     }
 
     private fun hasPhoneticName(contactId: Long): Boolean {
@@ -125,7 +134,6 @@ class ContactRepository(private val context: Context) {
             ContactsContract.CommonDataKinds.StructuredName.CONTENT_ITEM_TYPE,
         )
 
-        // Look for an existing StructuredName row for this raw contact
         val existingDataId: Long? = context.contentResolver.query(
             ContactsContract.Data.CONTENT_URI,
             arrayOf(ContactsContract.Data._ID),
@@ -137,7 +145,6 @@ class ContactRepository(private val context: Context) {
         }
 
         return if (existingDataId != null) {
-            // Update the phonetic field on the existing row
             val values = ContentValues().apply {
                 put(
                     ContactsContract.CommonDataKinds.StructuredName.PHONETIC_GIVEN_NAME,
@@ -151,7 +158,6 @@ class ContactRepository(private val context: Context) {
                 null,
             ) > 0
         } else {
-            // Insert a new StructuredName row with the phonetic field
             val values = ContentValues().apply {
                 put(ContactsContract.Data.RAW_CONTACT_ID, rawContactId)
                 put(

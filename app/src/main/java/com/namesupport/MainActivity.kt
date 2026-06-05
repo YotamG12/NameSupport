@@ -1,11 +1,13 @@
 package com.namesupport
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
+import android.view.Menu
+import android.view.MenuItem
 import android.view.View
-import android.widget.Button
-import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
@@ -15,8 +17,12 @@ import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.DividerItemDecoration
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.appbar.MaterialToolbar
+import com.google.android.material.progressindicator.LinearProgressIndicator
+import com.namesupport.notification.NotificationHelper
 import com.namesupport.ui.ContactAdapter
 import com.namesupport.ui.MainViewModel
+import com.namesupport.ui.SettingsActivity
 
 class MainActivity : AppCompatActivity() {
 
@@ -26,7 +32,9 @@ class MainActivity : AppCompatActivity() {
     private val requestPermissions = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
-        if (permissions.values.all { it }) {
+        if (permissions[Manifest.permission.READ_CONTACTS] == true &&
+            permissions[Manifest.permission.WRITE_CONTACTS] == true
+        ) {
             viewModel.scanContacts()
         } else {
             Toast.makeText(this, getString(R.string.permission_required), Toast.LENGTH_LONG).show()
@@ -37,9 +45,15 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        val btnScan = findViewById<Button>(R.id.btnScan)
-        val btnApply = findViewById<Button>(R.id.btnApply)
-        val progressBar = findViewById<ProgressBar>(R.id.progressBar)
+        val toolbar = findViewById<MaterialToolbar>(R.id.toolbar)
+        setSupportActionBar(toolbar)
+
+        NotificationHelper.createChannel(this)
+
+        val btnScan = findViewById<View>(R.id.btnScan)
+        val btnApply = findViewById<View>(R.id.btnApply)
+        val progressBar = findViewById<LinearProgressIndicator>(R.id.progressBar)
+        val layoutEmpty = findViewById<View>(R.id.layoutEmpty)
         val tvEmpty = findViewById<TextView>(R.id.tvEmpty)
         val tvStatus = findViewById<TextView>(R.id.tvStatus)
         val recyclerView = findViewById<RecyclerView>(R.id.recyclerView)
@@ -51,24 +65,12 @@ class MainActivity : AppCompatActivity() {
             DividerItemDecoration(this, DividerItemDecoration.VERTICAL)
         )
 
-        btnScan.setOnClickListener {
-            if (hasContactsPermission()) {
-                viewModel.scanContacts()
-            } else {
-                requestPermissions.launch(
-                    arrayOf(
-                        Manifest.permission.READ_CONTACTS,
-                        Manifest.permission.WRITE_CONTACTS,
-                    )
-                )
-            }
-        }
+        btnScan.setOnClickListener { requestScan() }
 
         btnApply.setOnClickListener {
             val selected = adapter.getSelectedContacts()
             if (selected.isEmpty()) {
-                Toast.makeText(this, getString(R.string.no_contacts_selected), Toast.LENGTH_SHORT)
-                    .show()
+                Toast.makeText(this, getString(R.string.no_contacts_selected), Toast.LENGTH_SHORT).show()
             } else {
                 viewModel.applyChanges(selected)
             }
@@ -78,7 +80,7 @@ class MainActivity : AppCompatActivity() {
             adapter.submitList(contacts)
             val hasResults = contacts.isNotEmpty()
             recyclerView.visibility = if (hasResults) View.VISIBLE else View.GONE
-            tvEmpty.visibility = if (hasResults) View.GONE else View.VISIBLE
+            layoutEmpty.visibility = if (hasResults) View.GONE else View.VISIBLE
             btnApply.isEnabled = hasResults
         }
 
@@ -103,9 +105,37 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun hasContactsPermission(): Boolean =
-        ContextCompat.checkSelfPermission(this, Manifest.permission.READ_CONTACTS) ==
-                PackageManager.PERMISSION_GRANTED &&
-                ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_CONTACTS) ==
-                PackageManager.PERMISSION_GRANTED
+    override fun onCreateOptionsMenu(menu: Menu): Boolean {
+        menuInflater.inflate(R.menu.menu_main, menu)
+        return true
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        return when (item.itemId) {
+            R.id.action_settings -> {
+                startActivity(Intent(this, SettingsActivity::class.java))
+                true
+            }
+            else -> super.onOptionsItemSelected(item)
+        }
+    }
+
+    private fun requestScan() {
+        val permissionsNeeded = buildList {
+            if (!hasPermission(Manifest.permission.READ_CONTACTS)) add(Manifest.permission.READ_CONTACTS)
+            if (!hasPermission(Manifest.permission.WRITE_CONTACTS)) add(Manifest.permission.WRITE_CONTACTS)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                !hasPermission(Manifest.permission.POST_NOTIFICATIONS)
+            ) add(Manifest.permission.POST_NOTIFICATIONS)
+        }
+
+        if (permissionsNeeded.isEmpty()) {
+            viewModel.scanContacts()
+        } else {
+            requestPermissions.launch(permissionsNeeded.toTypedArray())
+        }
+    }
+
+    private fun hasPermission(permission: String): Boolean =
+        ContextCompat.checkSelfPermission(this, permission) == PackageManager.PERMISSION_GRANTED
 }

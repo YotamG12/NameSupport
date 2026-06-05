@@ -20,7 +20,7 @@ object HebrewTransliterator {
         "גבריאל" to "Gavriel",   "מיכאל" to "Michael",     "דניאל" to "Daniel",
         "יונתן" to "Yonatan",     "יהונתן" to "Yehonatan",  "אבי" to "Avi",
         "ישי" to "Yishai",        "נועם" to "Noam",         "גל" to "Gal",
-        "אורי" to "Uri",          "איתמר" to "Itamar",      "בועז" to "Boaz",
+        "אורי" to "Ori",          "איתמר" to "Itamar",      "בועז" to "Boaz",
         "ינון" to "Yinon",        "עוז" to "Oz",            "שחר" to "Shachar",
         "תומר" to "Tomer",        "חיים" to "Chaim",        "זאב" to "Zeev",
         "ברוך" to "Baruch",       "אהרן" to "Aharon",       "ישראל" to "Israel",
@@ -52,6 +52,18 @@ object HebrewTransliterator {
         "אלמוג" to "Almog",       "גאון" to "Gaon",         "שפירא" to "Shapira",
         "שמיר" to "Shamir",       "בן" to "Ben",            "בר" to "Bar",
         "זיו" to "Ziv",           "טוב" to "Tov",           "אוחיון" to "Ohayion",
+        // Female names missing from original list
+        "מלכה" to "Malka",        "פנינה" to "Pnina",       "בתיה" to "Batya",
+        // Ethiopian/Eritrean surnames common in Israel
+        "מנגיסטו" to "Mangisto",
+        // Military / common Hebrew words used in contact names
+        "מילואים" to "Miluim",
+        // Relational words — translate to English meaning for voice commands
+        "אבא" to "Dad",           "אמא" to "Mom",
+        "סבא" to "Grandpa",       "סבתא" to "Grandma",
+        "אח" to "Bro",            "אחות" to "Sis",
+        "של" to "of",
+        "בית" to "Home",          "עבודה" to "Work",
     )
 
     // Default transliteration per Hebrew letter (fricative/spirant forms)
