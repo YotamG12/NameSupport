@@ -3,12 +3,10 @@ package com.namesupport.worker
 import android.content.Context
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
-import com.namesupport.BuildConfig
 import com.namesupport.data.AppPreferences
 import com.namesupport.data.ContactRepository
 import com.namesupport.data.db.AppDatabase
 import com.namesupport.notification.NotificationHelper
-import com.namesupport.util.GeminiTransliterator
 import kotlinx.coroutines.flow.first
 
 class ContactMonitorWorker(
@@ -25,10 +23,8 @@ class ContactMonitorWorker(
         val dao = AppDatabase.getInstance(applicationContext).contactRecordDao()
         val handledIds = dao.getAllHandledIds().toSet()
 
-        val gemini = BuildConfig.GEMINI_API_KEY.takeIf { it.isNotEmpty() }
-            ?.let { GeminiTransliterator(it) }
         val repository = ContactRepository(applicationContext)
-        val candidates = repository.getHebrewContactsWithoutPhonetic(gemini)
+        val candidates = repository.getHebrewContactsWithoutPhonetic()
 
         for (contact in candidates) {
             if (contact.id !in handledIds) {

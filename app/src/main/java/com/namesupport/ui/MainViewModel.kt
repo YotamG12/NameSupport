@@ -5,13 +5,11 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
-import com.namesupport.BuildConfig
 import com.namesupport.data.AppPreferences
 import com.namesupport.data.ContactRepository
 import com.namesupport.data.db.AppDatabase
 import com.namesupport.data.db.ContactRecord
 import com.namesupport.model.ContactItem
-import com.namesupport.util.GeminiTransliterator
 import com.namesupport.worker.WorkManagerScheduler
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -22,10 +20,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val repository = ContactRepository(application)
     private val prefs = AppPreferences(application)
     private val dao = AppDatabase.getInstance(application).contactRecordDao()
-    private val gemini: GeminiTransliterator? = run {
-        val key = BuildConfig.GEMINI_API_KEY
-        if (key.isNotEmpty()) GeminiTransliterator(key) else null
-    }
 
     private val _contacts = MutableLiveData<List<ContactItem>>(emptyList())
     val contacts: LiveData<List<ContactItem>> = _contacts
@@ -43,7 +37,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             _isLoading.value = true
             val result = withContext(Dispatchers.IO) {
-                repository.getHebrewContactsWithoutPhonetic(gemini)
+                repository.getHebrewContactsWithoutPhonetic()
             }
             _contacts.value = result
             _hasScanned.value = true
@@ -51,13 +45,19 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun applyChanges(selectedContacts: List<ContactItem>) {
+    fun applyChanges(selectedContacts: List<ContactItem>, saveWhatsAppToDevice: Boolean = false) {
         if (selectedContacts.isEmpty()) return
 
         viewModelScope.launch {
             _isLoading.value = true
             val successCount = withContext(Dispatchers.IO) {
-                selectedContacts.count { contact -> repository.applyPhoneticName(contact) }
+                selectedContacts.count { contact ->
+                    if (contact.isWhatsAppOnly && saveWhatsAppToDevice) {
+                        repository.saveToDeviceAndApply(contact)
+                    } else {
+                        repository.applyPhoneticName(contact)
+                    }
+                }
             }
             _message.value = "Updated $successCount of ${selectedContacts.size} contacts"
 
@@ -71,7 +71,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             }
 
             val refreshed = withContext(Dispatchers.IO) {
-                repository.getHebrewContactsWithoutPhonetic(gemini)
+                repository.getHebrewContactsWithoutPhonetic()
             }
             _contacts.value = refreshed
             _hasScanned.value = true

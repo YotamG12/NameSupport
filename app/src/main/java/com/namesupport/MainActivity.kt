@@ -12,6 +12,7 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.DividerItemDecoration
@@ -23,6 +24,7 @@ import com.namesupport.notification.NotificationHelper
 import com.namesupport.ui.ContactAdapter
 import com.namesupport.ui.MainViewModel
 import com.namesupport.ui.SettingsActivity
+import com.namesupport.worker.WorkManagerScheduler
 
 class MainActivity : AppCompatActivity() {
 
@@ -35,6 +37,7 @@ class MainActivity : AppCompatActivity() {
         if (permissions[Manifest.permission.READ_CONTACTS] == true &&
             permissions[Manifest.permission.WRITE_CONTACTS] == true
         ) {
+            WorkManagerScheduler.scheduleContactChangeJob(this)
             viewModel.scanContacts()
         } else {
             Toast.makeText(this, getString(R.string.permission_required), Toast.LENGTH_LONG).show()
@@ -71,6 +74,21 @@ class MainActivity : AppCompatActivity() {
             val selected = adapter.getSelectedContacts()
             if (selected.isEmpty()) {
                 Toast.makeText(this, getString(R.string.no_contacts_selected), Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+            val hasWhatsAppOnly = selected.any { it.isWhatsAppOnly }
+            if (hasWhatsAppOnly) {
+                AlertDialog.Builder(this)
+                    .setTitle(getString(R.string.dialog_whatsapp_title))
+                    .setMessage(getString(R.string.dialog_whatsapp_message))
+                    .setPositiveButton(getString(R.string.action_save_to_device)) { _, _ ->
+                        viewModel.applyChanges(selected, saveWhatsAppToDevice = true)
+                    }
+                    .setNeutralButton(getString(R.string.dialog_phonetic_only)) { _, _ ->
+                        viewModel.applyChanges(selected, saveWhatsAppToDevice = false)
+                    }
+                    .setNegativeButton(android.R.string.cancel, null)
+                    .show()
             } else {
                 viewModel.applyChanges(selected)
             }
@@ -130,6 +148,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         if (permissionsNeeded.isEmpty()) {
+            WorkManagerScheduler.scheduleContactChangeJob(this)
             viewModel.scanContacts()
         } else {
             requestPermissions.launch(permissionsNeeded.toTypedArray())

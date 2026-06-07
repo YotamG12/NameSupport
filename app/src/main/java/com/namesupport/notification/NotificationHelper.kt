@@ -36,6 +36,7 @@ object NotificationHelper {
             putExtra(ApprovalBroadcastReceiver.EXTRA_CONTACT_ID, contact.id)
             putExtra(ApprovalBroadcastReceiver.EXTRA_CONTACT_NAME, contact.displayName)
             putExtra(ApprovalBroadcastReceiver.EXTRA_SUGGESTION, contact.suggestion)
+            putExtra(ApprovalBroadcastReceiver.EXTRA_IS_WHATSAPP_ONLY, contact.isWhatsAppOnly)
             putExtra(ApprovalBroadcastReceiver.EXTRA_NOTIFICATION_ID, notifId)
         }
         val dismissIntent = Intent(context, ApprovalBroadcastReceiver::class.java).apply {
@@ -45,15 +46,15 @@ object NotificationHelper {
         }
 
         val approvePi = PendingIntent.getBroadcast(
-            context, notifId * 2,
+            context, notifId * 3,
             approveIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
         val dismissPi = PendingIntent.getBroadcast(
-            context, notifId * 2 + 1,
+            context, notifId * 3 + 1,
             dismissIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        val notification = NotificationCompat.Builder(context, CHANNEL_ID)
+        val builder = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle(context.getString(R.string.notification_title, contact.displayName))
             .setContentText(context.getString(R.string.notification_text, contact.suggestion))
@@ -61,8 +62,22 @@ object NotificationHelper {
             .setAutoCancel(true)
             .addAction(0, context.getString(R.string.action_approve), approvePi)
             .addAction(0, context.getString(R.string.action_dismiss), dismissPi)
-            .build()
 
-        NotificationManagerCompat.from(context).notify(notifId, notification)
+        if (contact.isWhatsAppOnly) {
+            val saveIntent = Intent(context, ApprovalBroadcastReceiver::class.java).apply {
+                action = ApprovalBroadcastReceiver.ACTION_SAVE_TO_DEVICE
+                putExtra(ApprovalBroadcastReceiver.EXTRA_CONTACT_ID, contact.id)
+                putExtra(ApprovalBroadcastReceiver.EXTRA_CONTACT_NAME, contact.displayName)
+                putExtra(ApprovalBroadcastReceiver.EXTRA_SUGGESTION, contact.suggestion)
+                putExtra(ApprovalBroadcastReceiver.EXTRA_NOTIFICATION_ID, notifId)
+            }
+            val savePi = PendingIntent.getBroadcast(
+                context, notifId * 3 + 2,
+                saveIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+            builder.addAction(0, context.getString(R.string.action_save_to_device), savePi)
+        }
+
+        NotificationManagerCompat.from(context).notify(notifId, builder.build())
     }
 }

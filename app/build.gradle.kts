@@ -1,15 +1,7 @@
-import java.util.Properties
-
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("com.google.devtools.ksp")
-}
-
-val localProps = Properties().also { props ->
-    rootProject.file("local.properties")
-        .takeIf { it.exists() }
-        ?.inputStream()?.use { props.load(it) }
 }
 
 android {
@@ -20,17 +12,8 @@ android {
         applicationId = "com.namesupport"
         minSdk = 24
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0"
-        buildConfigField(
-            "String",
-            "GEMINI_API_KEY",
-            "\"${localProps.getProperty("gemini.api_key", "")}\"",
-        )
-    }
-
-    buildFeatures {
-        buildConfig = true
+        versionCode = 3
+        versionName = "5.0.3"
     }
 
     buildTypes {
@@ -79,9 +62,6 @@ dependencies {
 
     // DataStore
     implementation("androidx.datastore:datastore-preferences:1.0.0")
-
-    // Gemini AI (on-device transliteration via cloud API)
-    implementation("com.google.ai.client.generativeai:generativeai:0.9.0")
 
     // Unit tests
     testImplementation("junit:junit:4.13.2")

@@ -20,4 +20,9 @@
     <string name="section_monitoring">Monitoring</string>
     <string name="section_data">Data</string>
     <string name="hint_phonetic_name">Phonetic name</string>
+    <string name="whatsapp_badge">WhatsApp only</string>
+    <string name="action_save_to_device">Save to device</string>
+    <string name="dialog_whatsapp_title">WhatsApp contacts</string>
+    <string name="dialog_whatsapp_message">Some selected contacts exist only in WhatsApp. Save them to device contacts as well?</string>
+    <string name="dialog_phonetic_only">Phonetic only</string>
 </resources>

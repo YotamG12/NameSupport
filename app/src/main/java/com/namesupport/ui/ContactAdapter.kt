@@ -50,11 +50,13 @@ class ContactAdapter : RecyclerView.Adapter<ContactAdapter.ViewHolder>() {
     inner class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         private val checkBox: CheckBox = view.findViewById(R.id.checkBox)
         private val tvOriginal: TextView = view.findViewById(R.id.tvOriginalName)
+        private val tvWhatsAppBadge: TextView = view.findViewById(R.id.tvWhatsAppBadge)
         private val etTranslit: TextInputEditText = view.findViewById(R.id.etTransliteration)
         private var textWatcher: TextWatcher? = null
 
         fun bind(contact: ContactItem) {
             tvOriginal.text = contact.displayName
+            tvWhatsAppBadge.visibility = if (contact.isWhatsAppOnly) View.VISIBLE else View.GONE
 
             // Remove old watcher before setText to prevent spurious callbacks on recycled views
             textWatcher?.let { etTranslit.removeTextChangedListener(it) }

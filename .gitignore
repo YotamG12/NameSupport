@@ -22,6 +22,6 @@ test_contacts.vcf
 add_contacts.sh
 screen*.png
 
-# Claude Code project settings — may contain tokens
-.claude/settings.json
-.claude/settings.local.json
+# Claude Code internal files — not for public repos
+CLAUDE.md
+.claude/

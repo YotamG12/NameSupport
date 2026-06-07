@@ -28,6 +28,15 @@
             android:textAppearance="?attr/textAppearanceTitleMedium"
             android:textDirection="rtl" />
 
+        <TextView
+            android:id="@+id/tvWhatsAppBadge"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/whatsapp_badge"
+            android:textAppearance="?attr/textAppearanceLabelSmall"
+            android:textColor="?attr/colorSecondary"
+            android:visibility="gone" />
+
         <com.google.android.material.textfield.TextInputLayout
             style="@style/Widget.Material3.TextInputLayout.OutlinedBox.Dense"
             android:layout_width="match_parent"
